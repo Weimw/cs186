@@ -102,15 +102,13 @@ class InnerNode extends BPlusNode {
             keys.add(index, newNode.get().getFirst()); 
             children.add(index + 1, newNode.get().getSecond());
             if (keys.size() > 2 * d) {
-                List<DataBox> newKeys = keys.subList(d, keys.size());
+                List<DataBox> newKeys = keys.subList(d + 1, keys.size());
                 List<Long> newChildren = children.subList(d + 1, children.size());
                 DataBox newKey = keys.get(d);
-                InnerNode newInnerNode = new InnerNode(metadata, bufferManager, newKeys,
-                                                       newChildren, treeContext);
+                InnerNode newInnerNode = new InnerNode(metadata, bufferManager, newKeys, newChildren, treeContext);
                 keys = keys.subList(0, d);
                 children = children.subList(0, d + 1);
-                result = Optional.of(new Pair<DataBox, Long>(newKey, 
-                                     newInnerNode.getPage().getPageNum()));
+                result = Optional.of(new Pair<DataBox, Long>(newKey, newInnerNode.getPage().getPageNum()));
             }
         }
         sync();
@@ -129,15 +127,13 @@ class InnerNode extends BPlusNode {
             keys.add(newNode.get().getFirst()); 
             children.add(newNode.get().getSecond());
             if (keys.size() > 2 * d) {
-                List<DataBox> newKeys = keys.subList(d, keys.size());
+                List<DataBox> newKeys = keys.subList(d + 1, keys.size());
                 List<Long> newChildren = children.subList(d + 1, children.size());
                 DataBox newKey = keys.get(d);
-                InnerNode newInnerNode = new InnerNode(metadata, bufferManager, newKeys,
-                                                       newChildren, treeContext);
+                InnerNode newInnerNode = new InnerNode(metadata, bufferManager, newKeys, newChildren, treeContext);
                 keys = keys.subList(0, d);
                 children = children.subList(0, d + 1);
-                result = Optional.of(new Pair<DataBox, Long>(newKey, 
-                                     newInnerNode.getPage().getPageNum()));
+                result = Optional.of(new Pair<DataBox, Long>(newKey, newInnerNode.getPage().getPageNum()));
             }
         }
         sync();
