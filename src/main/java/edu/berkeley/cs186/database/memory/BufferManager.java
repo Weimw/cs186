@@ -6,10 +6,10 @@ import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import java.util.function.Consumer;
 
 public interface BufferManager extends AutoCloseable {
-    // We reserve 30 bytes on each page for bookkeeping for recovery
+    // We reserve 36 bytes on each page for bookkeeping for recovery
     // (used to store the pageLSN, and to ensure that a redo-only/undo-only log record can
     // fit on one page).
-    short RESERVED_SPACE = 30;
+    short RESERVED_SPACE = 36;
 
     // Effective page size available to users of buffer manager.
     short EFFECTIVE_PAGE_SIZE = DiskSpaceManager.PAGE_SIZE - RESERVED_SPACE;
@@ -75,9 +75,16 @@ public interface BufferManager extends AutoCloseable {
     BufferFrame fetchNewPageFrame(int partNum, boolean logPage);
 
     /**
-     * Calls flush on every frame in sequence, and evicts the frames from memory.
+     * Calls flush on the frame of a page and unloads the page from the frame. If the page
+     * is not loaded, this does nothing.
+     * @param pageNum page number of page to evict
      */
-    void flushAll();
+    void evict(long pageNum);
+
+    /**
+     * Calls evict on every frame in sequence.
+     */
+    void evictAll();
 
     /**
      * Calls the passed in method with the page number of every loaded page.

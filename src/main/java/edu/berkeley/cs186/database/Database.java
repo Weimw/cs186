@@ -2,7 +2,6 @@ package edu.berkeley.cs186.database;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -33,7 +32,7 @@ public class Database implements AutoCloseable {
     private static final String TABLE_INFO_TABLE_NAME = METADATA_TABLE_PREFIX + "tables";
     private static final String INDEX_INFO_TABLE_NAME = METADATA_TABLE_PREFIX + "indices";
     private static final int DEFAULT_BUFFER_SIZE = 262144; // default of 1G
-    private static final int MAX_SCHEMA_SIZE = 4007;
+    private static final int MAX_SCHEMA_SIZE = 4001;
 
     // information_schema.tables, manages all tables in the database
     private Table tableInfo;
@@ -393,7 +392,7 @@ public class Database implements AutoCloseable {
             }
         }
 
-        this.bufferManager.flushAll();
+        this.bufferManager.evictAll();
 
         this.recoveryManager.close();
         this.recoveryTransaction.close();
