@@ -59,6 +59,8 @@ class BNLJOperator extends JoinOperator {
         private BacktrackingIterator<Record> rightRecordIterator = null;
         // The current record on the left page
         private Record leftRecord = null;
+        // The current record on the right page. Wonder why it is missing. 
+        private Record rightRecord = null;
         // The next record to return
         private Record nextRecord = null;
 
@@ -88,7 +90,10 @@ class BNLJOperator extends JoinOperator {
          * and leftRecord should be set to null.
          */
         private void fetchNextLeftBlock() {
-            // TODO(hw3_part1): implement
+            int numBlocks = numBuffers - 2;
+            leftRecordIterator = getBlockIterator(getLeftTableName(), leftIterator, numBlocks);
+            leftRecordIterator.markNext();
+            leftRecord = leftRecordIterator.hasNext() ? leftRecordIterator.next() : null;
         }
 
         /**
@@ -96,11 +101,14 @@ class BNLJOperator extends JoinOperator {
          * should be set to a record iterator over the next page of the right relation that
          * has a record in it.
          *
-         * If there are no more pages in the left relation with records, rightRecordIterator
+         * If there are no more pages in the *left relation with records, rightRecordIterator
          * should be set to null.
+         *  (or right? I need piazza!)
          */
         private void fetchNextRightPage() {
-            // TODO(hw3_part1): implement
+            rightRecordIterator = getBlockIterator(getRightTableName(), rightIterator, 1);
+            rightRecordIterator.markNext();
+            rightRecord = rightRecordIterator.hasNext() ? rightRecordIterator.next() : null;
         }
 
         /**
@@ -110,7 +118,32 @@ class BNLJOperator extends JoinOperator {
          * @throws NoSuchElementException if there are no more Records to yield
          */
         private void fetchNextRecord() {
-            // TODO(hw3_part1): implement
+            if (this.leftRecord == null) { throw new NoSuchElementException("No new record to fetch"); }
+            this.nextRecord = null;
+            do {
+                if (this.rightRecord != null) {
+                    DataBox leftJoinValue = this.leftRecord.getValues().get(BNLJOperator.this.getLeftColumnIndex());
+                    DataBox rightJoinValue = rightRecord.getValues().get(BNLJOperator.this.getRightColumnIndex());
+                    if (leftJoinValue.equals(rightJoinValue)) {
+                        this.nextRecord = joinRecords(leftRecord, rightRecord);
+                    }
+                    this.rightRecord = rightRecordIterator.hasNext() ? rightRecordIterator.next() : null;
+                } else if (leftRecordIterator.hasNext()) {
+                    leftRecord = leftRecordIterator.next();
+                    rightRecordIterator.reset();
+                    assert(rightRecordIterator.hasNext());
+                    rightRecord = rightRecordIterator.next();
+                } else if (rightIterator.hasNext()) {
+                    fetchNextRightPage();
+                    leftRecordIterator.reset();
+                    assert(leftRecordIterator.hasNext());
+                    leftRecord = leftRecordIterator.next();
+                } else if (leftIterator.hasNext()) {
+                    fetchNextLeftBlock();
+                    this.rightIterator = BNLJOperator.this.getPageIterator(this.getRightTableName());
+                    fetchNextRightPage();
+                } else break;
+            } while (!hasNext());
         }
 
         /**
