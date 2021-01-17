@@ -56,7 +56,51 @@ class SortMergeOperator extends JoinOperator {
 
         private SortMergeIterator() {
             super();
-            // TODO(hw3_part1): implement
+            this.leftIterator = getRecordIterator(new SortOperator(
+                getTransaction(), getLeftTableName(), new LeftRecordComparator()).sort());
+            this.rightIterator = getRecordIterator(new SortOperator(
+                getTransaction(), getRightTableName(), new RightRecordComparator()).sort());
+
+            this.leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
+            this.rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+            marked = false;
+            fetchNextRecord();
+        }
+
+        private void fetchNextRecord() {
+            this.nextRecord = null;
+            // Left and right comparator are the same?
+            LeftRecordComparator comparator = new LeftRecordComparator(); 
+            do {
+            	if (!marked) {
+            		while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) < 0) {
+            			leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
+            		}
+            		while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) > 0) {
+            			rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+            		}
+            		marked = true;
+            		rightIterator.markPrev();
+            	}
+            	
+            	if (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) == 0) {
+                    this.nextRecord = joinRecords(leftRecord, rightRecord);
+            		rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+            	} else{
+                    rightIterator.reset();
+                    rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+            		leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
+            		marked = false;
+            	}
+            } while (!hasNext());
+        }
+
+        /* Helper function to join records. */
+        private Record joinRecords(Record leftRecord, Record rightRecord) {
+            List<DataBox> leftValues = new ArrayList<>(leftRecord.getValues());
+            List<DataBox> rightValues = new ArrayList<>(rightRecord.getValues());
+            leftValues.addAll(rightValues);
+            return new Record(leftValues);
         }
 
         /**
@@ -66,9 +110,7 @@ class SortMergeOperator extends JoinOperator {
          */
         @Override
         public boolean hasNext() {
-            // TODO(hw3_part1): implement
-
-            return false;
+            return this.nextRecord != null;
         }
 
         /**
@@ -79,9 +121,13 @@ class SortMergeOperator extends JoinOperator {
          */
         @Override
         public Record next() {
-            // TODO(hw3_part1): implement
-
-            throw new NoSuchElementException();
+            if (hasNext()) {
+                Record result = nextRecord;
+                fetchNextRecord();
+                return nextRecord;
+            } else {
+                throw new NoSuchElementException();
+            }
         }
 
         @Override

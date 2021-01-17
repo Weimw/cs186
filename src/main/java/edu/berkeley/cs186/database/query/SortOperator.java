@@ -71,9 +71,15 @@ public class SortOperator {
      * size of the buffer, but it is done this way for ease.
      */
     public Run sortRun(Run run) {
-        // TODO(hw3_part1): implement
-
-        return null;
+        List<Record> records = new ArrayList<Record>();
+        Iterator<Record> iter = run.iterator();
+        while (iter.hasNext()) {
+            records.add(iter.next());
+        }
+        records.sort(comparator);
+        Run newRun = createRun();
+        newRun.addRecords(records);
+        return newRun;
     }
 
     /**
@@ -85,9 +91,31 @@ public class SortOperator {
      * sorting on currently unmerged from run i.
      */
     public Run mergeSortedRuns(List<Run> runs) {
-        // TODO(hw3_part1): implement
+        PriorityQueue<Pair<Record, Integer>> pq = 
+            new PriorityQueue<Pair<Record, Integer>>(new RecordPairComparator());
+        int n = runs.size();
+        List<Iterator<Record>> iters = new ArrayList<Iterator<Record>>();
+        for (int i = 0; i < n; ++i) {
+            Iterator<Record> iter = runs.get(i).iterator();
+            iters.add(iter);
+            if (iter.hasNext()) {
+                pq.add(new Pair<Record, Integer>(iter.next(), i));
+            }
+        }
 
-        return null;
+        List<Record> records = new ArrayList<Record>();
+        while (pq.size() > 0) {
+            Pair<Record, Integer> smallest = pq.poll();
+            records.add(smallest.getFirst());
+            int i = smallest.getSecond();
+            Iterator<Record> iter = iters.get(i);
+            if (iter.hasNext()) {
+                pq.add(new Pair<Record, Integer>(iter.next(), i));
+            }
+        }
+        Run sorted = createRun();
+        sorted.addRecords(records);
+        return sorted;
     }
 
     /**
@@ -96,9 +124,18 @@ public class SortOperator {
      * of the input runs at a time.
      */
     public List<Run> mergePass(List<Run> runs) {
-        // TODO(hw3_part1): implement
+        int n = runs.size();
+        int buffers = numBuffers - 1;
+        int batch = n / buffers;
 
-        return Collections.emptyList();
+        List<Run> result = new ArrayList<>();
+        for (int i = 0; i < batch; i++) {
+            result.add(mergeSortedRuns(runs.subList(buffers * i, buffers * (i + 1))));
+        }
+        if (n % buffers != 0) {
+            result.add(mergeSortedRuns(runs.subList(buffers * batch, n)));
+        }
+        return result;
     }
 
     /**
@@ -107,9 +144,21 @@ public class SortOperator {
      * Returns the name of the table that backs the final run.
      */
     public String sort() {
-        // TODO(hw3_part1): implement
-
-        return this.tableName; // TODO(hw3_part1): replace this!
+        BacktrackingIterator<Page> pageIter = transaction.getPageIterator(tableName);
+        List<Run> runs = new ArrayList<>();
+        
+        while (pageIter.hasNext()) {
+            BacktrackingIterator<Record> recordIter = 
+                transaction.getBlockIterator(tableName, pageIter, numBuffers);
+            Run run = createRunFromIterator(recordIter);
+            runs.add(sortRun(run));
+        }
+        
+        while (runs.size() > 1) {
+            runs = mergePass(runs);
+        }
+        sortedTableName = runs.get(0).tableName();
+        return sortedTableName;
     }
 
     public Iterator<Record> iterator() {
