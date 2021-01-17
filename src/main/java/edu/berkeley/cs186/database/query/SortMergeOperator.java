@@ -74,17 +74,20 @@ class SortMergeOperator extends JoinOperator {
             do {
             	if (!marked) {
                     if (leftRecord == null || rightRecord == null) break;
-                    while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) < 0) {
+                    while (leftRecord != null && rightRecord != null 
+                        && comparator.compare(leftRecord, rightRecord) < 0) {
                             leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
                     }  
-                    while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) > 0) {
+                    while (leftRecord != null && rightRecord != null 
+                        && comparator.compare(leftRecord, rightRecord) > 0) {
                             rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
                     } 
             		marked = true;
             		rightIterator.markPrev();
             	}
             	
-            	if (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) == 0) {
+                if (leftRecord != null && rightRecord != null 
+                    && comparator.compare(leftRecord, rightRecord) == 0) {
                     this.nextRecord = joinRecords(leftRecord, rightRecord);
             		rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
             	} else {
