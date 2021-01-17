@@ -73,12 +73,13 @@ class SortMergeOperator extends JoinOperator {
             LeftRecordComparator comparator = new LeftRecordComparator(); 
             do {
             	if (!marked) {
-            		while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) < 0) {
-            			leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
-            		}
-            		while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) > 0) {
-            			rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
-            		}
+                    if (leftRecord == null || rightRecord == null) break;
+                    while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) < 0) {
+                            leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
+                    }  
+                    while (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) > 0) {
+                            rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
+                    } 
             		marked = true;
             		rightIterator.markPrev();
             	}
@@ -86,7 +87,7 @@ class SortMergeOperator extends JoinOperator {
             	if (leftRecord != null && rightRecord != null && comparator.compare(leftRecord, rightRecord) == 0) {
                     this.nextRecord = joinRecords(leftRecord, rightRecord);
             		rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
-            	} else{
+            	} else {
                     rightIterator.reset();
                     rightRecord = rightIterator.hasNext() ? rightIterator.next() : null;
             		leftRecord = leftIterator.hasNext() ? leftIterator.next() : null;
@@ -124,7 +125,7 @@ class SortMergeOperator extends JoinOperator {
             if (hasNext()) {
                 Record result = nextRecord;
                 fetchNextRecord();
-                return nextRecord;
+                return result;
             } else {
                 throw new NoSuchElementException();
             }
