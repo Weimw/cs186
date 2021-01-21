@@ -112,17 +112,39 @@ public class Histogram {
      *              final bucket is inclusive on the last value.
      */
     public void buildHistogram(Table table, int attribute) {
-        // TODO(hw3_part2): implement
+        BacktrackingIterator<Record> iter = table.iterator();
+        Record minRecord = iter.next();
+        Record maxRecord = minRecord;
+        Record curRecord;
+        float minRecordValue = quantization(minRecord, attribute); 
+        float maxRecordValue = quantization(maxRecord, attribute);
+        float curRecordValue;
+        while (iter.hasNext()) {
+            curRecord = iter.next();
+            curRecordValue = quantization(curRecord, attribute);
+            if (curRecordValue < minRecordValue) {
+                minRecord = curRecord;
+                minRecordValue = curRecordValue;
+            } else if (curRecordValue > maxRecordValue) {
+                maxRecord = curRecord;
+                maxRecordValue = curRecordValue;
+            }
+        }
+        this.minValue = minRecordValue;
+        this.maxValue = maxRecordValue;
 
-        //1. first calculate the min and the max values
+        int numBuckets = this.buckets.length;
+        this.width = (maxValue - minValue) / numBuckets;
 
-        //2. calculate the width of each bin
+        for (int i = 0; i < numBuckets; i++) {
+            buckets[i] = new Bucket<>(i * width, (i + 1) * width);
+        }
 
-        //3. create each bucket object
-
-        //4. populate the data using the increment(value) method
-
-        return;
+        iter = table.iterator();
+        while (iter.hasNext()) {
+            curRecordValue = quantization(iter.hasNext(), attribute);
+            buckets[bucketIndex(curRecordValue)].increment(curRecordValue);
+        }
     }
 
     private int bucketIndex(float v) {
@@ -261,9 +283,14 @@ public class Histogram {
      */
     private float [] allEquality(float qvalue) {
         float [] result = new float[this.buckets.length];
-
-        // TODO(hw3_part2): implement
-
+        for (int i = 0; i < buckets.length - 1; i++) {
+            if (buckets[i].getStart() <= qvalue && buckets[i].getEnd() > qvalue) {
+                result[i] = 1 / (float) buckets[i].getDistinctCount();
+            } else result[i] = 0f;
+        }
+        if (buckets[i].getStart() <= qvalue && buckets[i].getEnd() >= qvalue) {
+            result[i] = 1 / (float) buckets[i].getDistinctCount();
+        } else result[i] = 0f;
         return result;
     }
 
@@ -273,9 +300,14 @@ public class Histogram {
       */
     private float [] allNotEquality(float qvalue) {
         float [] result = new float[this.buckets.length];
-
-        // TODO(hw3_part2): implement
-
+        for (int i = 0; i < buckets.length - 1; i++) {
+            if (buckets[i].getStart() <= qvalue && buckets[i].getEnd() > qvalue) {
+                result[i] = 1 - 1 / (float) buckets[i].getDistinctCount();
+            } else result[i] = 1f;
+        }
+        if (buckets[i].getStart() <= qvalue && buckets[i].getEnd() >= qvalue) {
+            result[i] = 1 - 1 / (float) buckets[i].getDistinctCount();
+        } else result[i] = 1f;
         return result;
     }
 
@@ -285,9 +317,15 @@ public class Histogram {
      */
     private float [] allGreaterThan(float qvalue) {
         float [] result = new float[this.buckets.length];
-
-        // TODO(hw3_part2): implement
-
+        for (int i = 0; i < buckets.length; i++) {
+            if (buckets[i].getEnd() <= qvalue) {
+                result[i] = 0f;
+            } else if (buckets[i].getStart() > qvalue) {
+                result[i] = 1f;
+            } else {
+                result[i] = (buckets[i].getEnd() - qvalue) / width;
+            }
+        }
         return result;
     }
 
@@ -297,9 +335,15 @@ public class Histogram {
       */
     private float [] allLessThan(float qvalue) {
         float [] result = new float[this.buckets.length];
-
-        // TODO(hw3_part2): implement
-
+        for (int i = 0; i < buckets.length; i++) {
+            if (buckets[i].getEnd() <= qvalue) {
+                result[i] = 1f;
+            } else if (buckets[i].getStart() > qvalue) {
+                result[i] = 0f;
+            } else {
+                result[i] = (qvalue - buckets[i].getStart()) / width;
+            }
+        }
         return result;
     }
 
