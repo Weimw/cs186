@@ -3,6 +3,7 @@ package edu.berkeley.cs186.database.table.stats;
 import java.util.Iterator;
 
 import edu.berkeley.cs186.database.common.PredicateOperator;
+import edu.berkeley.cs186.database.common.iterator.BacktrackingIterator;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.table.Table;
 import edu.berkeley.cs186.database.table.Record;
@@ -113,20 +114,15 @@ public class Histogram {
      */
     public void buildHistogram(Table table, int attribute) {
         BacktrackingIterator<Record> iter = table.iterator();
-        Record minRecord = iter.next();
-        Record maxRecord = minRecord;
         Record curRecord;
-        float minRecordValue = quantization(minRecord, attribute); 
-        float maxRecordValue = quantization(maxRecord, attribute);
-        float curRecordValue;
+        float minRecordValue = quantization(iter.next(), attribute),
+            maxRecordValue = minRecordValue, curRecordValue;
         while (iter.hasNext()) {
             curRecord = iter.next();
             curRecordValue = quantization(curRecord, attribute);
             if (curRecordValue < minRecordValue) {
-                minRecord = curRecord;
                 minRecordValue = curRecordValue;
             } else if (curRecordValue > maxRecordValue) {
-                maxRecord = curRecord;
                 maxRecordValue = curRecordValue;
             }
         }
@@ -142,7 +138,7 @@ public class Histogram {
 
         iter = table.iterator();
         while (iter.hasNext()) {
-            curRecordValue = quantization(iter.hasNext(), attribute);
+            curRecordValue = quantization(iter.next(), attribute);
             buckets[bucketIndex(curRecordValue)].increment(curRecordValue);
         }
     }
@@ -283,7 +279,8 @@ public class Histogram {
      */
     private float [] allEquality(float qvalue) {
         float [] result = new float[this.buckets.length];
-        for (int i = 0; i < buckets.length - 1; i++) {
+        int i;
+        for (i = 0; i < buckets.length - 1; i++) {
             if (buckets[i].getStart() <= qvalue && buckets[i].getEnd() > qvalue) {
                 result[i] = 1 / (float) buckets[i].getDistinctCount();
             } else result[i] = 0f;
@@ -300,7 +297,8 @@ public class Histogram {
       */
     private float [] allNotEquality(float qvalue) {
         float [] result = new float[this.buckets.length];
-        for (int i = 0; i < buckets.length - 1; i++) {
+        int i;
+        for (i = 0; i < buckets.length - 1; i++) {
             if (buckets[i].getStart() <= qvalue && buckets[i].getEnd() > qvalue) {
                 result[i] = 1 - 1 / (float) buckets[i].getDistinctCount();
             } else result[i] = 1f;
@@ -317,7 +315,8 @@ public class Histogram {
      */
     private float [] allGreaterThan(float qvalue) {
         float [] result = new float[this.buckets.length];
-        for (int i = 0; i < buckets.length; i++) {
+        int i;
+        for (i = 0; i < buckets.length; i++) {
             if (buckets[i].getEnd() <= qvalue) {
                 result[i] = 0f;
             } else if (buckets[i].getStart() > qvalue) {
