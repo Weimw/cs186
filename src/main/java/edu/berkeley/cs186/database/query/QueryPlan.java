@@ -245,11 +245,11 @@ public class QueryPlan {
             map = minCostJoins(map, pass1Map);
         }
 
-        // Get the lowest cost operator from the last pass, add GROUP BY and SELECT
+        // Get the lowest cost operator from the last pass, add GROUP BY and PROJECT
         // operators, and return an iterator on the final operator
         this.finalOperator = this.minCostOperator(map);
         this.addGroupBy();
-        this.addSelects();
+        this.addProjects();
         return this.finalOperator.execute();
     }
 
@@ -341,17 +341,16 @@ public class QueryPlan {
 
         // 1. Find the cost of a sequential scan of the table
         minOp = new SequentialScanOperator(this.transaction, table);
-        int minCost = minOp.cost;
 
         // 2. For each eligible index column, find the cost of an index scan of the
         // table and retain the lowest cost operator
         QueryOperator indexOp = null;
         int minIndex = -1;
-        for (int i: getEligibleIndexColumns(table)) {
+        List<Integer> eligibleIndexColumns = getEligibleIndexColumns(table);
+        for (int i: eligibleIndexColumns) {
             indexOp = new IndexScanOperator(this.transaction, table,
                     selectColumnNames.get(i), selectOperators.get(i), selectDataBoxes.get(i));
-            if (indexOp.cost < minCost) {
-                minCost = indexOp.cost;
+            if (indexOp.cost < minOp.cost) {
                 minOp = indexOp;
                 minIndex = i;
             }
@@ -436,8 +435,8 @@ public class QueryPlan {
          * and the previously joined tables.
          */
 
-                QueryOperator minOp = null;
-                String nameToJoin = "";
+                QueryOperator minOp;
+                String nameToJoin;
                 if (setTable.contains(leftTableName) && !setTable.contains(rightTableName)) {
                     minOp = minCostJoinType(prevMap.get(setTable),
                             pass1Map.get(new HashSet(Arrays.asList(rightTableName))),
@@ -448,10 +447,11 @@ public class QueryPlan {
                             pass1Map.get(new HashSet(Arrays.asList(leftTableName))),
                             rightColName, leftColName);
                     nameToJoin = leftTableName;
-                }
+                } else continue;
+
                 Set<String> currentSet = new HashSet<>();
                 currentSet.addAll(setTable);
-                if (!nameToJoin.isEmpty()) currentSet.add(nameToJoin);
+                currentSet.add(nameToJoin);
                 if (map.containsKey(currentSet)) {
                     int opCost = minOp.estimateIOCost();
                     if (opCost < map.get(currentSet).estimateIOCost()) {
