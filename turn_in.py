@@ -50,13 +50,18 @@ def files_to_copy(assignment):
             'src/main/java/edu/berkeley/cs186/database/concurrency/LockManager.java',
             'src/main/java/edu/berkeley/cs186/database/concurrency/LockContext.java',
             'src/main/java/edu/berkeley/cs186/database/concurrency/LockUtil.java',
+            'src/main/java/edu/berkeley/cs186/database/index/LeafNode.java',
+            'src/main/java/edu/berkeley/cs186/database/index/InnerNode.java',
             'src/main/java/edu/berkeley/cs186/database/index/BPlusTree.java',
             'src/main/java/edu/berkeley/cs186/database/memory/Page.java',
             'src/main/java/edu/berkeley/cs186/database/table/PageDirectory.java',
             'src/main/java/edu/berkeley/cs186/database/table/Table.java',
             'src/main/java/edu/berkeley/cs186/database/Database.java',
         ],
-        'hw5': []
+        'hw5': [
+            'src/main/java/edu/berkeley/cs186/database/recovery/ARIESRecoveryManager.java',
+            'src/test/java/edu/berkeley/cs186/database/recovery/TestARIESStudent.java',
+        ],
     }
     return files[assignment]
 

@@ -10,6 +10,7 @@ public class LoggingLockManager extends LockManager {
     public List<String> log = Collections.synchronizedList(new ArrayList<>());
     private boolean logging = false;
     private boolean suppressInternal = true;
+    private boolean suppressStatus = false;
     private Map<Long, LockContext> contexts = new HashMap<>();
     private Map<Long, Boolean> loggingOverride = new ConcurrentHashMap<>();
 
@@ -39,11 +40,15 @@ public class LoggingLockManager extends LockManager {
         estr.append(']');
         emit(estr.toString());
 
-        loggingOverride.put(Thread.currentThread().getId(), !suppressInternal);
+        Boolean[] oldOverride = new Boolean[1];
+        loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> {
+            oldOverride[0] = old;
+            return !suppressInternal;
+        });
         try {
             super.acquireAndRelease(transaction, name, lockType, releaseLocks);
         } finally {
-            loggingOverride.remove(Thread.currentThread().getId());
+            loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> oldOverride[0]);
         }
     }
 
@@ -51,11 +56,15 @@ public class LoggingLockManager extends LockManager {
     public void acquire(TransactionContext transaction, ResourceName name, LockType type) {
         emit("acquire " + transaction.getTransNum() + " " + name + " " + type);
 
-        loggingOverride.put(Thread.currentThread().getId(), !suppressInternal);
+        Boolean[] oldOverride = new Boolean[1];
+        loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> {
+            oldOverride[0] = old;
+            return !suppressInternal;
+        });
         try {
             super.acquire(transaction, name, type);
         } finally {
-            loggingOverride.remove(Thread.currentThread().getId());
+            loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> oldOverride[0]);
         }
     }
 
@@ -63,11 +72,15 @@ public class LoggingLockManager extends LockManager {
     public void release(TransactionContext transaction, ResourceName name) {
         emit("release " + transaction.getTransNum() + " " + name);
 
-        loggingOverride.put(Thread.currentThread().getId(), !suppressInternal);
+        Boolean[] oldOverride = new Boolean[1];
+        loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> {
+            oldOverride[0] = old;
+            return !suppressInternal;
+        });
         try {
             super.release(transaction, name);
         } finally {
-            loggingOverride.remove(Thread.currentThread().getId());
+            loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> oldOverride[0]);
         }
     }
 
@@ -75,11 +88,15 @@ public class LoggingLockManager extends LockManager {
     public void promote(TransactionContext transaction, ResourceName name, LockType newLockType) {
         emit("promote " + transaction.getTransNum() + " " + name + " " + newLockType);
 
-        loggingOverride.put(Thread.currentThread().getId(), !suppressInternal);
+        Boolean[] oldOverride = new Boolean[1];
+        loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> {
+            oldOverride[0] = old;
+            return !suppressInternal;
+        });
         try {
             super.promote(transaction, name, newLockType);
         } finally {
-            loggingOverride.remove(Thread.currentThread().getId());
+            loggingOverride.compute(Thread.currentThread().getId(), (id, old) -> oldOverride[0]);
         }
     }
 
@@ -103,8 +120,16 @@ public class LoggingLockManager extends LockManager {
         suppressInternal = toggle;
     }
 
+    public void suppressStatus(boolean toggle) {
+        suppressStatus = toggle;
+    }
+
     void emit(String s) {
         long tid = Thread.currentThread().getId();
+        if (suppressStatus && !s.startsWith("acquire") && !s.startsWith("promote") &&
+                !s.startsWith("release")) {
+            return;
+        }
         if ((loggingOverride.containsKey(tid) ? loggingOverride.get(tid) : logging)) {
             log.add(s);
         }

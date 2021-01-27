@@ -23,6 +23,9 @@ public class MemoryDiskSpaceManager implements DiskSpaceManager {
 
     @Override
     public int allocPart(int partNum) {
+        if (partitions.containsKey(partNum)) {
+            throw new IllegalStateException("partition " + partNum + " already allocated");
+        }
         partitions.put(partNum, new HashSet<>());
         nextPageNum.put(partNum, 0);
         nextPartitionNum = partNum + 1;
@@ -61,7 +64,7 @@ public class MemoryDiskSpaceManager implements DiskSpaceManager {
             throw new IllegalArgumentException("partition " + partNum + " not allocated");
         }
         if (pages.containsKey(page)) {
-            throw new PageException("page " + page + " already exists");
+            throw new IllegalStateException("page " + page + " already allocated");
         }
         nextPageNum.put(partNum, ppageNum + 1);
         partitions.get(partNum).add(ppageNum);
@@ -72,7 +75,7 @@ public class MemoryDiskSpaceManager implements DiskSpaceManager {
     @Override
     public void freePage(long page) {
         if (!pages.containsKey(page)) {
-            throw new IllegalArgumentException("page " + page + " not allocated");
+            throw new NoSuchElementException("page " + page + " not allocated");
         }
         int partNum = DiskSpaceManager.getPartNum(page);
         int pageNum = DiskSpaceManager.getPageNum(page);
@@ -100,5 +103,10 @@ public class MemoryDiskSpaceManager implements DiskSpaceManager {
             throw new PageException("page " + page + " not allocated");
         }
         System.arraycopy(buf, 0, pages.get(page), 0, DiskSpaceManager.PAGE_SIZE);
+    }
+
+    @Override
+    public boolean pageAllocated(long page) {
+        return pages.containsKey(page);
     }
 }

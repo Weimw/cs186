@@ -138,5 +138,13 @@ public class TestLockUtil {
                      ), lockManager.log);
     }
 
+    @Test
+    @Category(PublicTests.class)
+    public void testSimpleNL() {
+        lockManager.startLog();
+        LockUtil.ensureSufficientLockHeld(tableContext, LockType.NL);
+        assertEquals(Collections.emptyList(), lockManager.log);
+    }
+
 }
 
