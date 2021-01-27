@@ -18,9 +18,13 @@ public enum LockType {
         if (a == null || b == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(hw4_part1): implement
-
-        return false;
+        if (a == NL || b == NL) {
+            return true;
+        } else if ((a == IS && b != X) || (b == IS && a != X)) {
+            return true;
+        } else if ((a == IX && b == IX) || (a == S && b == S)) {
+            return true;
+        } else return false;
     }
 
     /**
@@ -50,9 +54,16 @@ public enum LockType {
         if (parentLockType == null || childLockType == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(hw4_part1): implement
-
-        return false;
+        if (childLockType == NL) {
+            return true;
+        } else if (parentLockType == IX) {
+            return true;
+        } else if (parentLockType == IS && (childLockType == IS || childLockType == S)) {
+            return true;
+        } else if (parentLockType == SIX
+                && (childLockType == IX || childLockType == SIX || childLockType == X)) {
+            return true;
+        } else return false;
     }
 
     /**
@@ -65,9 +76,17 @@ public enum LockType {
         if (required == null || substitute == null) {
             throw new NullPointerException("null lock type");
         }
-        // TODO(hw4_part1): implement
-
-        return false;
+        if (substitute == required) {
+            return true;
+        } else if (required == NL) {
+            return true;
+        } else if (substitute == SIX && required == S) {
+            return true;
+        } else if (substitute == X && required == S) {
+            return true;
+        } else if (substitute == IX && required == IS) {
+            return true;
+        } else return false;
     }
 
     @Override
