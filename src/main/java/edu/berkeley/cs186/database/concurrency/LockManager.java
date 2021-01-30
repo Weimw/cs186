@@ -119,6 +119,7 @@ public class LockManager {
          *  Helper function to process waiting queue.
          */
         private void processWaitingQueue() {
+            Set<ResourceEntry> toProcess = new HashSet<>();
             while (!waitingQueue.isEmpty()) {
                 LockRequest request = waitingQueue.getFirst();
                 if (isCompatible(request.lock)) {
@@ -129,7 +130,6 @@ public class LockManager {
                         updateLock(request.lock);
                     }
 
-                    Set<ResourceEntry> toProcess = new HashSet<>();
                     for (Lock lock: request.releasedLocks) {
                         ResourceEntry entry = getResourceEntry(lock.name);
                         entry.removeLock(lock);
@@ -137,11 +137,10 @@ public class LockManager {
                     }
                     waitingQueue.pollFirst();
                     request.transaction.unblock();
-
-                    for (ResourceEntry entry: toProcess) {
-                        entry.processWaitingQueue();
-                    }
-                } else return;
+                } else break;
+            }
+            for (ResourceEntry entry: toProcess) {
+                entry.processWaitingQueue();
             }
         }
 
@@ -189,16 +188,6 @@ public class LockManager {
     private ResourceEntry getResourceEntry(ResourceName name) {
         resourceEntries.putIfAbsent(name, new ResourceEntry());
         return resourceEntries.get(name);
-    }
-
-
-    /**
-     * Helper method to determine whether request can be unblocked.
-     */
-
-    private boolean isValid(LockRequest request, ResourceName name) {
-        ResourceEntry entry = getResourceEntry(name);
-        return entry.isCompatible(request.lock);
     }
 
     /**
