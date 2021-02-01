@@ -80,9 +80,11 @@ public enum LockType {
             return true;
         } else if (required == NL) {
             return true;
-        } else if (substitute == SIX && required == S) {
+        } else if (substitute == SIX &&
+                (required == S || required == IS || required == IX)) {
             return true;
-        } else if (substitute == X && required == S) {
+        } else if (substitute == X &&
+                (required == S || required == SIX || required == IX)) {
             return true;
         } else if (substitute == IX && required == IS) {
             return true;

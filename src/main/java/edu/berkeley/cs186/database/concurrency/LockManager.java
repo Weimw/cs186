@@ -223,11 +223,7 @@ public class LockManager {
             }
         }
         boolean blocked = false;
-        // You may modify any part of this method. You are not required to keep all your
-        // code within the given synchronized block -- in fact,
-        // you will have to write some code outside the synchronized block to avoid locking up
-        // the entire lock manager when a transaction is blocked. You are also allowed to
-        // move the synchronized block elsewhere if you wish.
+ 
         synchronized (this) {
             ResourceEntry entry = getResourceEntry(name);
             Lock lock = new Lock(name, lockType, transaction.getTransNum());

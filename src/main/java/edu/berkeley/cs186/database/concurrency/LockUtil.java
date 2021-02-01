@@ -2,6 +2,10 @@ package edu.berkeley.cs186.database.concurrency;
 
 import edu.berkeley.cs186.database.TransactionContext;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * LockUtil is a declarative layer which simplifies multigranularity lock acquisition
  * for the user (you, in the second half of Part 2). Generally speaking, you should use LockUtil
@@ -19,12 +23,66 @@ public class LockUtil {
      * If the current transaction is null (i.e. there is no current transaction), this method should do nothing.
      */
     public static void ensureSufficientLockHeld(LockContext lockContext, LockType lockType) {
-        // TODO(hw4_part2): implement
-
         TransactionContext transaction = TransactionContext.getTransaction(); // current transaction
+        if (transaction == null || lockType.equals(LockType.NL)) return;
+        LockType effectiveLockType = lockContext.getEffectiveLockType(transaction);
+        if (LockType.substitutable(effectiveLockType, lockType)) return;
 
-        return;
+        if (lockType.equals(LockType.S)) {
+            List<LockContext> ancestors = getAncestors(lockContext);
+            for (LockContext ancestor : ancestors) {
+                LockType ancestorLockType = ancestor.getExplicitLockType(transaction);
+                if (ancestorLockType.equals(LockType.NL)) {
+                    ancestor.acquire(transaction, LockType.IS);
+                }
+            }
+
+            LockType explicitLockType = lockContext.getExplicitLockType(transaction);
+            if (explicitLockType.equals(LockType.NL)) {
+                lockContext.acquire(transaction, LockType.S);
+            } else if (explicitLockType.equals(LockType.IS)) {
+                lockContext.escalate(transaction);
+            } else {
+                lockContext.promote(transaction, LockType.SIX);
+            }
+        } else {
+            List<LockContext> ancestors = getAncestors(lockContext);
+            for (LockContext ancestor : ancestors) {
+                LockType ancestorLockType = ancestor.getExplicitLockType(transaction);
+                if (ancestorLockType.equals(LockType.NL)) {
+                    ancestor.acquire(transaction, LockType.IX);
+                } else if (ancestorLockType.equals(LockType.IS)) {
+                    ancestor.promote(transaction, LockType.IX);
+                } else if (ancestorLockType.equals(LockType.S)) {
+                    ancestor.promote(transaction, LockType.SIX);
+                }
+            }
+
+            LockType explicitLockType = lockContext.getExplicitLockType(transaction);
+            if (explicitLockType.equals(LockType.NL)) {
+                lockContext.acquire(transaction, LockType.X);
+            } else if (explicitLockType.equals(LockType.IS)) {
+                lockContext.escalate(transaction);
+                lockContext.promote(transaction, LockType.X);
+            }else if (explicitLockType.equals(LockType.S)) {
+                lockContext.promote(transaction, LockType.X);
+            } else {
+                lockContext.escalate(transaction);
+            }
+        }
     }
 
-    // TODO(hw4_part2): add helper methods as you see fit
+    /**
+     * Helper method to get all ancestors. Return the ancestors in a top-down manner.
+     */
+    private static List<LockContext> getAncestors(LockContext context) {
+        List<LockContext> ancestors = new ArrayList<>();
+        LockContext pointer = context.parentContext();
+        while (pointer != null) {
+            ancestors.add(pointer);
+            pointer = pointer.parentContext();
+        }
+        Collections.reverse(ancestors);
+        return ancestors;
+    }
 }
