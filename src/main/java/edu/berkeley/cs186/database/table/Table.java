@@ -119,6 +119,7 @@ public class Table implements BacktrackingIterable<Record> {
      */
     public Table(String name, Schema schema, HeapFile heapFile, LockContext lockContext) {
         // TODO(hw4_part2): table locking code
+        LockUtil.ensureSufficientLockHeld(lockContext, LockType.X);
 
         this.name = name;
         this.heapFile = heapFile;
