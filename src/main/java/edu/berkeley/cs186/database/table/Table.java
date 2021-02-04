@@ -3,9 +3,11 @@ package edu.berkeley.cs186.database.table;
 import java.util.*;
 
 import edu.berkeley.cs186.database.DatabaseException;
+import edu.berkeley.cs186.database.TransactionContext;
 import edu.berkeley.cs186.database.common.iterator.*;
 import edu.berkeley.cs186.database.common.Bits;
 import edu.berkeley.cs186.database.common.Buffer;
+import edu.berkeley.cs186.database.concurrency.Lock;
 import edu.berkeley.cs186.database.concurrency.LockContext;
 import edu.berkeley.cs186.database.concurrency.LockType;
 import edu.berkeley.cs186.database.concurrency.LockUtil;
@@ -110,6 +112,9 @@ public class Table implements BacktrackingIterable<Record> {
 
     // The lock context of the table.
     private LockContext lockContext;
+
+    // The indicator whether auto-escalation is on
+    boolean autoEscalateEnabled = true;
 
     // Constructors //////////////////////////////////////////////////////////////
     /**
@@ -289,6 +294,10 @@ public class Table implements BacktrackingIterable<Record> {
      * exists.
      */
     public synchronized Record getRecord(RecordId rid) {
+        // TODO(hw4_part2): modify for smarter locking
+        if (autoEscalateEnabled) {
+            autoEscalate();
+        }
         validateRecordId(rid);
         Page page = fetchPage(rid.getPageNum());
         try {
@@ -314,6 +323,12 @@ public class Table implements BacktrackingIterable<Record> {
      */
     public synchronized Record updateRecord(List<DataBox> values, RecordId rid) {
         // TODO(hw4_part2): modify for smarter locking
+        if (autoEscalateEnabled) {
+            autoEscalate();
+        }
+
+        LockContext context = lockContext.childContext(rid.getPageNum());
+        LockUtil.ensureSufficientLockHeld(context, LockType.X);
 
         validateRecordId(rid);
 
@@ -339,6 +354,11 @@ public class Table implements BacktrackingIterable<Record> {
      */
     public synchronized Record deleteRecord(RecordId rid) {
         // TODO(hw4_part2): modify for smarter locking
+        if (autoEscalateEnabled) {
+            autoEscalate();
+        }
+        LockContext context = lockContext.childContext(rid.getPageNum());
+        LockUtil.ensureSufficientLockHeld(context, LockType.X);
 
         validateRecordId(rid);
 
@@ -439,6 +459,7 @@ public class Table implements BacktrackingIterable<Record> {
      */
     public void enableAutoEscalate() {
         // TODO(hw4_part2): implement
+        autoEscalateEnabled = true;
     }
 
     /**
@@ -447,11 +468,24 @@ public class Table implements BacktrackingIterable<Record> {
      */
     public void disableAutoEscalate() {
         // TODO(hw4_part2): implement
+        autoEscalateEnabled = false;
+    }
+
+    /**
+     * Helper method to check the prerequisites and auto escalate locks
+     */
+    private void autoEscalate() {
+        if (lockContext == null) return;
+        TransactionContext transaction = TransactionContext.getTransaction();
+        if (lockContext.capacity() >= 10 && lockContext.saturation(transaction) >= 0.2) {
+            lockContext.escalate(transaction);
+        }
     }
 
     // Iterators /////////////////////////////////////////////////////////////////
     public BacktrackingIterator<RecordId> ridIterator() {
         // TODO(hw4_part2): reduce locking overhead for table scans
+        LockUtil.ensureSufficientLockHeld(lockContext, LockType.S);
 
         BacktrackingIterator<Page> iter = heapFile.iterator();
         return new ConcatBacktrackingIterator<>(new PageIterator(iter, false));
