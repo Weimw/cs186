@@ -519,6 +519,8 @@ public class ARIESRecoveryManager implements RecoveryManager {
         if (lastRecord.isUndoable()) {
             Pair<LogRecord, Boolean> undo = lastRecord.undo(entry.lastLSN);
             logManager.appendToLog(undo.getFirst());
+
+            // if the log must be flushed up to the CLR after executing the undo
             if (undo.getSecond()) {
                 undo.getFirst().redo(diskSpaceManager, bufferManager);
             }
@@ -707,8 +709,6 @@ public class ARIESRecoveryManager implements RecoveryManager {
                                 acquireTransactionLock(txnTableEntry.transaction,
                                         getPageLockContext(pageNum), LockType.X);
                             }
-                        } else {
-                            txnTableEntry.transaction.cleanup();
                         }
                         txnTableEntry.transaction.setStatus(entry.getValue().getFirst());
                     }
@@ -721,8 +721,9 @@ public class ARIESRecoveryManager implements RecoveryManager {
             TransactionTableEntry txnTableEntry = entry.getValue();
             switch (txnTableEntry.transaction.getStatus()) {
                 case COMMITTING:
-                    txnTableEntry.transaction.cleanup();
                     txnTableEntry.transaction.setStatus(Transaction.Status.COMPLETE);
+                case COMPLETE:
+                    txnTableEntry.transaction.cleanup();
                     logManager.appendToLog(new EndTransactionLogRecord(entry.getKey(),
                             txnTableEntry.lastLSN));
                     transactionTable.remove(entry.getKey());
@@ -776,7 +777,6 @@ public class ARIESRecoveryManager implements RecoveryManager {
                     logRecord.redo(diskSpaceManager, bufferManager);
                 }
             }
-
         }
     }
 
